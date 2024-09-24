@@ -1,8 +1,8 @@
+const fs = require("fs");
+const path = require("path");
 const axios = require("axios");
 const crypto = require("crypto");
-const fs = require("fs");
 const { PDFDocument } = require("pdf-lib");
-const path = require("path");
 const { headers, book_id } = require("./config.json");
 
 const getBooks = async () => {
@@ -23,10 +23,6 @@ const extractKey = (html) => {
 // Entah lah
 const genereateKey = (str) => {
   const groups = str.match(/\D+\d/g) || [];
-
-  if (groups.length !== 128) {
-    console.warn(`Ignoring the error and continuing…`);
-  }
 
   let bitfield = groups.map((s) => (s[parseInt(s.slice(-1))] === s.slice(-2, -1) ? "1" : "0"));
 
@@ -105,12 +101,10 @@ const createPDF = async (images, metadata) => {
   const pdfDoc = await PDFDocument.create();
   const { title, authors, pub_date, num_pages, volume_id, publisher } = metadata;
 
-  // Add metadata
   pdfDoc.setTitle(title);
   pdfDoc.setAuthor(authors);
   pdfDoc.setKeywords(["pdf"]);
   pdfDoc.setProducer(publisher);
-  pdfDoc.setCreator(authors);
 
   for (const img of images) {
     const imgBytes = fs.readFileSync(img);
@@ -121,14 +115,13 @@ const createPDF = async (images, metadata) => {
   }
 
   const pdfBytes = await pdfDoc.save();
-  const filename = `${sanitizedText(title)}.pdf`;
 
-  fs.writeFileSync(filename, pdfBytes);
-  console.log("PDF created successfully as", filename);
+  fs.writeFileSync(`${sanitizedText(title)}.pdf`, pdfBytes);
+  console.log(`PDF created successfully as ${title}.pdf`);
 };
 
 const hashContent = (buffer) => {
-  return crypto.createHash("sha256").update(buffer).digest("hex");
+  return crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 16);
 };
 
 const unescapeHtml = (text) => text.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
@@ -143,19 +136,18 @@ const main = async () => {
     const pageFiles = [];
     const toc = extractToc(html);
     const { title, authors, pub_date, num_pages, volume_id, publisher } = manifest.metadata;
-    let humanToc = "";
 
     if (toc) {
-      humanToc = toc
+      const readableToc = toc
         .map((t) => {
           return `${"    ".repeat(t.depth)}${unescapeHtml(t.label)} ........`.padEnd(80, ".") + ` p.${t.page_index + 1}`;
         })
         .join("\n");
 
-      fs.writeFileSync(`${sanitizedText(title)}_Toc.txt`, humanToc);
+      fs.writeFileSync(`${sanitizedText(title)}_Toc.txt`, readableToc);
     }
 
-    console.log("Download book");
+    console.log("Play book downloader");
     console.log("Title :", title);
     console.log("Authors :", authors);
     console.log("Pub dates :", pub_date);
@@ -183,7 +175,7 @@ const main = async () => {
         continue;
       }
 
-      console.log(`Download ${hashFilename}, pages ${order + 1}.`);
+      console.log(`Downloading file ${hashFilename}, pages ${order + 1}.`);
       pageFiles.push(`${temp}/${hashFilename}`);
       fs.writeFileSync(`${temp}/${hashFilename}`, decryptedBuffer);
       await new Promise((resolve) => setTimeout(resolve, 500));
