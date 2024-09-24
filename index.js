@@ -164,7 +164,6 @@ const main = async () => {
     console.log("Num pages :", num_pages);
     console.log("Vol id :", volume_id);
     console.log("Publisher  :", publisher);
-    console.log("Key :", aesKey.toString("hex"));
 
     for (const page of manifest.page) {
       const { pid, src, order } = page;
