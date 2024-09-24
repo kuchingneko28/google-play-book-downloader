@@ -171,17 +171,21 @@ const main = async () => {
       const decryptedBuffer = decryptPage(buffer, aesKey);
       const fileHash = hashContent(decryptedBuffer);
       const hashFilename = `${pid}_${fileHash}.${ext}`;
-      const tmp = path.join(__dirname, "/tmp");
+      const temp = path.join(__dirname, "/temp");
 
-      if (fs.existsSync(`${tmp}/${hashFilename}`, hashFilename)) {
+      if (!fs.existsSync(temp)) {
+        fs.mkdirSync(temp);
+      }
+
+      if (fs.existsSync(`${temp}/${hashFilename}`, hashFilename)) {
         console.log(`File ${hashFilename} already exists, skipping download.`);
-        pageFiles.push(`${tmp}/${hashFilename}`);
+        pageFiles.push(`${temp}/${hashFilename}`);
         continue;
       }
 
       console.log(`Download ${hashFilename}, pages ${order + 1}.`);
-      pageFiles.push(`${tmp}/${hashFilename}`);
-      fs.writeFileSync(`${tmp}/${hashFilename}`, decryptedBuffer);
+      pageFiles.push(`${temp}/${hashFilename}`);
+      fs.writeFileSync(`${temp}/${hashFilename}`, decryptedBuffer);
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
