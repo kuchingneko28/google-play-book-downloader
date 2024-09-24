@@ -152,9 +152,7 @@ const main = async () => {
         })
         .join("\n");
 
-      const filename = `${sanitizedText(title)}_Toc.txt`;
-
-      fs.writeFileSync(filename, humanToc);
+      fs.writeFileSync(`${sanitizedText(title)}_Toc.txt`, humanToc);
     }
 
     console.log("Download book");
