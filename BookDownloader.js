@@ -98,7 +98,6 @@ class BookDownloader {
     params.set("img", "1");
     url.search = params.toString();
 
-    // Check if file exists in book-specific folder
     const files = fs.readdirSync(this.bookTempDir);
     const existingFile = files.find((file) => file.startsWith(`${pid}_`));
     if (existingFile) {
@@ -184,6 +183,7 @@ class BookDownloader {
       console.log("Total pages :", num_pages);
       console.log("Publisher  :", publisher);
       console.log("Downloading page...");
+      
       for (const page of pages) {
         const { pid, src, order } = page;
         const path = await this.downloadAndDecryptPage(src, aesKey, pid, order, num_pages);

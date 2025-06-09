@@ -50,9 +50,8 @@ node index.js CkUJEAAAQBAJ
 
 ## 🛠 Notes
 
-* If you get a cookie error, try re-exporting cookies or refreshing login
-* Waits between page downloads to avoid rate-limiting
-* Uses AES-128-CBC to decrypt encrypted page data
+* If you get an error while downloading the page, try re-exporting the cookies
+
 
 ---
 
@@ -67,5 +66,4 @@ A: Common causes:
 
 * ❌ Expired or invalid cookies
 * ❌ Book not fully purchased
-* 🔄 Google changed internal behavior (script may need updates)
 
