@@ -22,7 +22,7 @@ npm install
 
 ### 3. Export `cookies.txt` from your browser
 
-* Use a browser extension like [Get cookies.txt](https://chrome.google.com/webstore/detail/get-cookiestxt/iejblfompndnhinmlbaohbfpkkdnjhib)
+* Use a browser extension like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
 * Visit: `https://play.google.com/books`
 * Export cookies and save them as `cookies.txt` in the project root
 
