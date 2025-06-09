@@ -8,8 +8,11 @@ class BookDownloader {
   constructor(bookId) {
     this.bookId = bookId;
     this.tempDir = path.join(__dirname, "/temp");
+    this.bookTempDir = path.join(this.tempDir, this.bookId);
+    if (!fs.existsSync(this.bookTempDir)) fs.mkdirSync(this.bookTempDir, { recursive: true });
     if (!fs.existsSync(this.tempDir)) fs.mkdirSync(this.tempDir);
   }
+
   getHeadersFromCookies() {
     const cookiePath = path.join(__dirname, "cookies.txt");
     const cookieData = fs.readFileSync(cookiePath, "utf-8");
@@ -17,7 +20,6 @@ class BookDownloader {
     const cookies = cookieData
       .split("\n")
       .filter((line) => {
-        // skip comments and invalid lines
         return line.trim() && !line.startsWith("#") && line.split("\t").length >= 7;
       })
       .map((line) => {
@@ -25,12 +27,11 @@ class BookDownloader {
         const name = parts[5]?.trim();
         const value = parts[6]?.trim();
 
-        // filter out bad characters
         if (!/^[\x20-\x7E]+$/.test(name) || !/^[\x20-\x7E]+$/.test(value)) return null;
 
         return `${name}=${value}`;
       })
-      .filter(Boolean); // remove nulls
+      .filter(Boolean);
 
     return {
       accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -97,6 +98,14 @@ class BookDownloader {
     params.set("img", "1");
     url.search = params.toString();
 
+    // Check if file exists in book-specific folder
+    const files = fs.readdirSync(this.bookTempDir);
+    const existingFile = files.find((file) => file.startsWith(`${pid}_`));
+    if (existingFile) {
+      console.log(`Page ${order + 1} already exists (${existingFile})`);
+      return path.join(this.bookTempDir, existingFile);
+    }
+
     const res = await axios.get(url.toString(), {
       headers: this.getHeadersFromCookies(),
       responseType: "arraybuffer",
@@ -113,14 +122,10 @@ class BookDownloader {
     const hash = crypto.createHash("sha256").update(decrypted).digest("hex").slice(0, 16);
     const ext = this.getExtension(res.headers["content-type"]);
     const filename = `${pid}_${hash}.${ext}`;
-    const filepath = path.join(this.tempDir, filename);
+    const filepath = path.join(this.bookTempDir, filename);
 
-    if (!fs.existsSync(filepath)) {
-      fs.writeFileSync(filepath, decrypted);
-      console.log(`Downloaded page ${order + 1} of ${num_pages}`);
-    } else {
-      console.log(`Page ${order + 1} already exists`);
-    }
+    fs.writeFileSync(filepath, decrypted);
+    console.log(`Downloaded page ${order + 1} of ${num_pages}`);
 
     return filepath;
   }
