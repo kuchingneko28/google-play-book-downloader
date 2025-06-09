@@ -42,7 +42,7 @@ class BookDownloader {
     };
   }
 
-  async fetchBookHtml() {
+  async getBookHtml() {
     const res = await axios.get(`https://play.google.com/books/reader?id=${this.bookId}&hl=en`, {
       headers: this.getHeadersFromCookies(),
     });
@@ -75,7 +75,7 @@ class BookDownloader {
   }
 
   async getManifest() {
-    const res = await axios.get(`https://play.google.com/books/volumes/${this.bookId}/manifest?hl=en&source=ge-web-app`, { headers: this.getHeadersFromCookies(), withCredentials: true });
+    const res = await axios.get(`https://play.google.com/books/volumes/${this.bookId}/manifest?hl=en&source=ge-web-app`, { headers: this.getHeadersFromCookies() });
     return res.data;
   }
 
@@ -164,7 +164,7 @@ class BookDownloader {
   async run() {
     try {
       console.log(chalk.blue("Fetching book..."));
-      const html = await this.fetchBookHtml();
+      const html = await this.getBookHtml();
       const aesKey = this.extractKey(html);
       const manifest = await this.getManifest();
       const metadata = manifest.metadata;
