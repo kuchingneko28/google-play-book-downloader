@@ -99,7 +99,7 @@ class BookDownloader {
     url.search = params.toString();
 
     const files = fs.readdirSync(this.bookTempDir);
-    const existingFile = files.find((file) => file.startsWith(`${pid}_`));
+    const existingFile = files.find((file) => file.startsWith(pid));
     if (existingFile) {
       console.log(`Page ${order + 1} already exists (${existingFile})`);
       return path.join(this.bookTempDir, existingFile);
@@ -118,9 +118,8 @@ class BookDownloader {
     const decipher = crypto.createDecipheriv("aes-128-cbc", aesKey, iv);
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
-    const hash = crypto.createHash("sha256").update(decrypted).digest("hex").slice(0, 16);
     const ext = this.getExtension(res.headers["content-type"]);
-    const filename = `${pid}_${hash}.${ext}`;
+    const filename = `${pid}.${ext}`;
     const filepath = path.join(this.bookTempDir, filename);
 
     fs.writeFileSync(filepath, decrypted);
@@ -182,8 +181,8 @@ class BookDownloader {
       console.log("Pub dates :", pub_date);
       console.log("Total pages :", num_pages);
       console.log("Publisher  :", publisher);
-      console.log("Downloading page...");
-      
+      console.log("Downloading...");
+
       for (const page of pages) {
         const { pid, src, order } = page;
         const path = await this.downloadAndDecryptPage(src, aesKey, pid, order, num_pages);
