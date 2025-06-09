@@ -10,8 +10,8 @@ This tool downloads and decrypts books from [Google Play Books](https://play.goo
 ### 1. Clone or download this repo
 
 ```bash
-git clone https://github.com/yourusername/play-books-downloader.git
-cd play-books-downloader
+git clone https://github.com/kuchingneko28/google-play-book-downloader.git
+cd google-play-book-downloader
 ```
 
 ### 2. Install dependencies
