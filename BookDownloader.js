@@ -3,6 +3,7 @@ const path = require("path");
 const axios = require("axios");
 const crypto = require("crypto");
 const { PDFDocument } = require("pdf-lib");
+const chalk = require("chalk");
 
 class BookDownloader {
   constructor(bookId) {
@@ -35,9 +36,6 @@ class BookDownloader {
 
     return {
       accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-      "accept-language": "id,en-US;q=0.9,en;q=0.8",
-      dnt: "1",
-      priority: "u=0, i",
       referer: "https://play.google.com/books",
       cookie: cookies.join("; "),
       "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
@@ -47,13 +45,12 @@ class BookDownloader {
   async fetchBookHtml() {
     const res = await axios.get(`https://play.google.com/books/reader?id=${this.bookId}&hl=en`, {
       headers: this.getHeadersFromCookies(),
-      withCredentials: true,
     });
 
     return res.data;
   }
 
-  extractAesKey(html) {
+  extractKey(html) {
     const match = html.match(/<body[\s\S]*?<[^>]+src\s*=\s*["']data:.*?base64,([^"']+)["']/);
     const raw = Buffer.from(match[1], "base64").toString();
     return this.generateKey(raw);
@@ -77,12 +74,12 @@ class BookDownloader {
     return Buffer.from(keyBytes);
   }
 
-  async fetchManifest() {
+  async getManifest() {
     const res = await axios.get(`https://play.google.com/books/volumes/${this.bookId}/manifest?hl=en&source=ge-web-app`, { headers: this.getHeadersFromCookies(), withCredentials: true });
     return res.data;
   }
 
-  extractToc(html) {
+  getToc(html) {
     const match = html.match(/"toc_entry":\s*(\[[\s\S]*?}\s*])/);
     return match ? JSON.parse(match[1]) : [];
   }
@@ -108,7 +105,6 @@ class BookDownloader {
     const res = await axios.get(url.toString(), {
       headers: this.getHeadersFromCookies(),
       responseType: "arraybuffer",
-      withCredentials: true,
     });
 
     const buffer = res.data;
@@ -128,22 +124,25 @@ class BookDownloader {
     return filepath;
   }
 
-  getExtension(mime) {
+  getExtension(type) {
     const types = {
       "image/png": "png",
       "image/jpeg": "jpeg",
       "image/webp": "webp",
     };
-    return types[mime] || "bin";
+    return types[type];
   }
 
   async createPdf(images, metadata) {
     const pdf = await PDFDocument.create();
     const { title, authors, publisher } = metadata;
 
-    pdf.setTitle(title);
-    pdf.setAuthor(authors);
-    pdf.setProducer(publisher);
+    pdf.setTitle(title || "Untitled");
+    pdf.setAuthor(Array.isArray(authors) ? authors.join(", ") : authors || "Unknown Author");
+    pdf.setProducer(publisher || "Unknown Publisher");
+    pdf.setSubject("Downloaded from Google Play Books");
+    pdf.setKeywords(["Google Play", "eBook", title]);
+    pdf.setCreationDate(new Date());
 
     for (const imagePath of images) {
       const bytes = fs.readFileSync(imagePath);
@@ -153,35 +152,35 @@ class BookDownloader {
     }
 
     const pdfBytes = await pdf.save();
-    const filename = `${this.sanitize(title)}.pdf`;
+    const filename = `${this.unescapeText(title || "Untitled")}.pdf`;
     fs.writeFileSync(filename, pdfBytes);
-    console.log(`✅ PDF saved as ${filename}`);
+    console.log(chalk.green(`PDF saved as ${filename}`));
   }
 
-  sanitize(str) {
+  unescapeText(str) {
     return str.replace(/[<>:"\/\\|?*]+/g, "");
   }
 
   async run() {
     try {
-      console.log("📖 Fetching book...");
+      console.log(chalk.blue("Fetching book..."));
       const html = await this.fetchBookHtml();
-      const aesKey = this.extractAesKey(html);
-      const manifest = await this.fetchManifest();
+      const aesKey = this.extractKey(html);
+      const manifest = await this.getManifest();
       const metadata = manifest.metadata;
-      const toc = this.extractToc(html);
+      const toc = this.getToc(html);
 
       const { title, authors, pub_date, num_pages, volume_id, publisher } = metadata;
       const pages = manifest.page;
       const imagePaths = [];
 
-      console.log("Google Play Book Downloader");
-      console.log("Title :", title);
-      console.log("Authors :", authors);
-      console.log("Pub dates :", pub_date);
-      console.log("Total pages :", num_pages);
-      console.log("Publisher  :", publisher);
-      console.log("Downloading...");
+      console.log(chalk.green.bold("\nGoogle Play Book Downloader"));
+      console.log(chalk.cyan("Title       :"), chalk.white(title));
+      console.log(chalk.cyan("Authors     :"), chalk.white(authors));
+      console.log(chalk.cyan("Published   :"), chalk.white(pub_date));
+      console.log(chalk.cyan("Total Pages :"), chalk.white(num_pages));
+      console.log(chalk.cyan("Publisher   :"), chalk.white(publisher));
+      console.log(chalk.yellow("\nDownloading pages..."));
 
       for (const page of pages) {
         const { pid, src, order } = page;
@@ -190,7 +189,7 @@ class BookDownloader {
         await new Promise((r) => setTimeout(r, 300));
       }
 
-      console.log("Creating pdf file...");
+      console.log(chalk.magenta("Creating PDF file..."));
       await this.createPdf(imagePaths, metadata);
 
       if (toc) {
@@ -202,11 +201,11 @@ class BookDownloader {
           })
           .join("\n");
 
-        fs.writeFileSync(`${this.sanitize(metadata.title)}_Toc.txt`, formattedToc);
-        console.log("📑 TOC saved.");
+        fs.writeFileSync(`${this.unescapeText(metadata.title)}_Toc.txt`, formattedToc);
+        console.log(chalk.blue("TOC saved."));
       }
     } catch (err) {
-      console.error("❌ Error:", err.message);
+      console.error(chalk.red("Error:"), err.message);
     }
   }
 
