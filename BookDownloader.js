@@ -50,7 +50,7 @@ class BookDownloader {
     return res.data;
   }
 
-  extractKey(html) {
+  getKey(html) {
     const match = html.match(/<body[\s\S]*?<[^>]+src\s*=\s*["']data:.*?base64,([^"']+)["']/);
     const raw = Buffer.from(match[1], "base64").toString();
     return this.generateKey(raw);
@@ -165,7 +165,7 @@ class BookDownloader {
     try {
       console.log(chalk.blue("Fetching book..."));
       const html = await this.getBookHtml();
-      const aesKey = this.extractKey(html);
+      const aesKey = this.getKey(html);
       const manifest = await this.getManifest();
       const metadata = manifest.metadata;
       const toc = this.getToc(html);
