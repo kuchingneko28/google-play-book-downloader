@@ -1,5 +1,5 @@
 {
-  "name": "waduh-hek",
+  "name": "Google play book downloader",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -12,8 +12,9 @@
   "dependencies": {
     "axios": "^1.7.7",
     "crypto": "^1.0.1",
-    "fs": "^0.0.1-security",
+    "fs": "0.0.1-security",
     "path": "^0.12.7",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "tough-cookie": "^5.1.2"
   }
 }
