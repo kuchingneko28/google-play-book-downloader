@@ -4,6 +4,7 @@ const axios = require("axios");
 const crypto = require("crypto");
 const { PDFDocument } = require("pdf-lib");
 const chalk = require("chalk");
+const cliProgress = require("cli-progress");
 
 class BookDownloader {
   constructor(bookId) {
@@ -102,26 +103,67 @@ class BookDownloader {
       return path.join(this.bookTempDir, existingFile);
     }
 
-    const res = await axios.get(url.toString(), {
+    const response = await axios.get(url.toString(), {
       headers: this.getHeadersFromCookies(),
-      responseType: "arraybuffer",
+      responseType: "stream",
     });
 
-    const buffer = res.data;
-    const iv = buffer.slice(0, 16);
-    const encrypted = buffer.slice(16);
+    const totalLength = parseInt(response.headers["content-length"] || "0", 10);
+    let downloaded = 0;
+    const chunks = [];
 
-    const decipher = crypto.createDecipheriv("aes-128-cbc", aesKey, iv);
-    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    const progressBar = new cliProgress.SingleBar({
+      format: `↓ [{bar}] {percentage}% | {humanValue}/{humanTotal}`,
+      barCompleteChar: "#",
+      barIncompleteChar: ".",
+      barsize: 25,
+    });
 
-    const ext = this.getExtension(res.headers["content-type"]);
-    const filename = `${pid}.${ext}`;
-    const filepath = path.join(this.bookTempDir, filename);
+    progressBar.start(totalLength, 0, {
+      humanTotal: this.formatBytes(totalLength),
+      humanValue: this.formatBytes(0),
+    });
 
-    fs.writeFileSync(filepath, decrypted);
-    console.log(`Downloaded page ${order + 1} of ${num_pages}`);
+    return new Promise((resolve, reject) => {
+      response.data.on("data", (chunk) => {
+        chunks.push(chunk);
+        downloaded += chunk.length;
+        progressBar.update(downloaded, {
+          humanValue: this.formatBytes(downloaded),
+        });
+      });
 
-    return filepath;
+      response.data.on("end", () => {
+        progressBar.stop();
+        const buffer = Buffer.concat(chunks);
+
+        try {
+          const iv = buffer.slice(0, 16);
+          const encrypted = buffer.slice(16);
+
+          const decipher = crypto.createDecipheriv("aes-128-cbc", aesKey, iv);
+          const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+
+          const ext = this.getExtension(response.headers["content-type"]);
+          const filename = `${pid}.${ext}`;
+          const filepath = path.join(this.bookTempDir, filename);
+
+          fs.writeFileSync(filepath, decrypted);
+          console.log(`Downloaded page ${order + 1} of ${num_pages}`);
+          resolve(filepath);
+        } catch (err) {
+          reject(err);
+        }
+      });
+
+      response.data.on("error", reject);
+    });
+  }
+  formatBytes(bytes) {
+    if (bytes === 0) return "0 Bytes";
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   }
 
   getExtension(type) {
