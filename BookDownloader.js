@@ -194,13 +194,14 @@ class BookDownloader {
     }
 
     const pdfBytes = await pdf.save();
-    const filename = `${this.unescapeText(title || "Untitled")}.pdf`;
+    const safeTitle = this.safeName(title || "Untitled");
+    const filename = `${safeTitle}_decrypted.pdf`;
     fs.writeFileSync(filename, pdfBytes);
     console.log(chalk.green(`PDF saved as ${filename}`));
   }
 
-  unescapeText(str) {
-    return str.replace(/[<>:"\/\\|?*]+/g, "");
+  safeName(name) {
+    return name.trim().replace(/[^a-z0-9_\-\.]/gi, "_");
   }
 
   async run() {
@@ -243,7 +244,7 @@ class BookDownloader {
           })
           .join("\n");
 
-        fs.writeFileSync(`${this.unescapeText(metadata.title)}_Toc.txt`, formattedToc);
+        fs.writeFileSync(`${this.safeName(metadata.title)}_Toc.txt`, formattedToc);
         console.log(chalk.blue("TOC saved."));
       }
     } catch (err) {
